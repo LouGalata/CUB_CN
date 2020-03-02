@@ -63,7 +63,7 @@ N_CLASSES = 200
 N_IMAGES =len(dataset)
 
 mean = defaultdict(int)
-stddev = defaultdict(int)
+# stddev = defaultdict(int)
 # std_train_list = []
 # train_set = {}
 for count, img_tensor in enumerate(train_data["img_path"]):
@@ -85,12 +85,16 @@ for count, img_tensor in enumerate(test_data["img_path"]):
     mean['R'] += means[0]
     mean['G'] += means[1]
     mean['B'] += means[2]
+
     # std_test_list.append(stddev)
     # test_set[count] = img
 
 for item, value in mean.items():
     mean[item] = value/float(N_IMAGES)
 
+print("The mean Red value is %3f" %mean['R'])
+print("The mean Green value is %3f" %mean['G'])
+print("The mean Blue value is %3f" %mean['B'])
 
 print("Training dataset contains %d images" % train_data.shape[0])
 # display(train_data.sample(5))
@@ -118,6 +122,7 @@ def get_img(img_path):
 
     # resize the image to the desired size.
     img = tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH])
+
 
     _, stddevs = tf.nn.moments(img, axes=[0, 1])
 
@@ -166,7 +171,6 @@ def get_tf_dataset(data, batch_size=32):
 # Get tf.data.Datasets objects
 train_dataset = get_tf_dataset(train_data, batch_size=32)
 
-# test_dataset = get_tf_dataset(test_data, batch_size=16)
 
 
 # Show a training
@@ -188,6 +192,11 @@ model = tf.keras.models.Sequential([
 
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 model.summary()
-history = model.fit(train_dataset, epochs=5)
+history = model.fit(train_dataset, epochs=4)
 
-tf.one_hot(10, 200)
+test_dataset = get_tf_dataset(test_data, batch_size=32)
+
+test_loss = model.evaluate(test_dataset)
+
+print(test_loss)
+# tf.one_hot(10, 200)
