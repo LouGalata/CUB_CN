@@ -14,6 +14,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import math
 # # Commented out IPython magic to ensure Python compatibility.
 # from __future__ import absolute_import, division, print_function, unicode_literals
 # %tensorflow_version 2.x
@@ -56,45 +57,68 @@ test_data = dataset[dataset["is_train"] == 0]
 
 """## Create tf.data.Dataset from images and labels for testing and training"""
 
-IMG_HEIGHT = 200
-IMG_WIDTH = 180
+IMG_HEIGHT = 128
+IMG_WIDTH = 128
 N_CHANNELS = 3
 N_CLASSES = 200
 N_IMAGES =len(dataset)
 
-mean = defaultdict(int)
-# stddev = defaultdict(int)
-# std_train_list = []
-# train_set = {}
-for count, img_tensor in enumerate(train_data["img_path"]):
-    img = cv2.imread(img_tensor) / 255.0
-    img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
-    means, _ = cv2.meanStdDev(img)
-    mean['R'] += means[0]
-    mean['G'] += means[1]
-    mean['B'] += means[2]
-    # std_train_list.append(stddev)
-    # train_set[count] = (img)
 
-# std_test_list = []
-# test_set = {}
-for count, img_tensor in enumerate(test_data["img_path"]):
-    img = cv2.imread(img_tensor).astype(np.float32)/255.0
-    img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
-    means, _ = cv2.meanStdDev(img)
-    mean['R'] += means[0]
-    mean['G'] += means[1]
-    mean['B'] += means[2]
+def get_mean_std(train_data, test_data):
+    mean = defaultdict(int)
+    stddev = defaultdict(int)
+    # std_train_list = []
+    # train_set = {}
+    for count, img_tensor in enumerate(train_data["img_path"]):
+        img = cv2.imread(img_tensor) / 255.0
+        img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
+        means, _ = cv2.meanStdDev(img)
+        mean['R'] += means[0][0]
+        mean['G'] += means[1][0]
+        mean['B'] += means[2][0]
+        # std_train_list.append(stddev)
+        # train_set[count] = (img)
 
-    # std_test_list.append(stddev)
-    # test_set[count] = img
+    # std_test_list = []
+    # test_set = {}
+    for count, img_tensor in enumerate(test_data["img_path"]):
+        img = cv2.imread(img_tensor).astype(np.float32) / 255.0
+        img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
+        means, _ = cv2.meanStdDev(img)
+        mean['R'] += means[0][0]
+        mean['G'] += means[1][0]
+        mean['B'] += means[2][0]
 
-for item, value in mean.items():
-    mean[item] = value/float(N_IMAGES)
+        # std_test_list.append(stddev)
+        # test_set[count] = img
 
-print("The mean Red value is %3f" %mean['R'])
-print("The mean Green value is %3f" %mean['G'])
-print("The mean Blue value is %3f" %mean['B'])
+    for item, value in mean.items():
+        mean[item] = value / float(N_IMAGES)
+
+    for count, img_tensor in enumerate(train_data["img_path"]):
+        img = cv2.imread(img_tensor).astype(np.float32) / 255.0
+        img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
+        # sum((x - mean(x)). ^ 2) / (length(x) - 1);
+        stddev['R'] += np.sum(np.power(img[:, :, 0] - mean['R'], 2) / (IMG_HEIGHT * IMG_WIDTH - 1))
+        stddev['G'] += np.sum((np.power(img[:, :, 1] - mean['G'], 2))) / (IMG_HEIGHT * IMG_WIDTH - 1)
+        stddev['B'] += np.sum((np.power(img[:, :, 2] - mean['B'], 2))) / (IMG_HEIGHT * IMG_WIDTH - 1)
+
+    for item, value in stddev.items():
+        stddev[item] = value / float(N_IMAGES)
+
+    print("The mean Red value is %3f" % mean['R'])
+    print("The mean Green value is %3f" % mean['G'])
+    print("The mean Blue value is %3f" % mean['B'])
+    print(mean.values())
+
+    print("The std Red value is %3f" % stddev['R'])
+    print("The std Green value is %3f" % stddev['G'])
+    print("The std Blue value is %3f" % stddev['B'])
+    print(stddev.values())
+    return mean.values, stddev.values
+
+
+mean, stddev = get_mean_std(train_data, test_data)
 
 print("Training dataset contains %d images" % train_data.shape[0])
 # display(train_data.sample(5))
@@ -125,6 +149,16 @@ def get_img(img_path):
 
 
     _, stddevs = tf.nn.moments(img, axes=[0, 1])
+    # stddevs = []
+    # stddevs.append(tf.math.reduce_std(
+    #     img, axis=0, keepdims=False, name=None
+    # ))
+    # stddevs.append(tf.math.reduce_std(
+    #     img, axis=1, keepdims=False, name=None
+    # ))
+    # stddevs.append(tf.math.reduce_std(
+    #     img, axis=2, keepdims=False, name=None
+    # ))
 
     channel_r = (img[:, :, 0:1] - mean['R']) / stddevs[0]
     channel_g = (img[:, :, 1:2] - mean['G']) / stddevs[1]
@@ -143,6 +177,7 @@ def show_batch(image_batch, label_batch):
     try:
         for n in range(25):
             ax = plt.subplot(5, 5, n+1)
+
             plt.imshow((image_batch[n]*255.0).astype(np.uint8))
             plt.title(get_class_name(np.argmax(label_batch[n])))
             plt.axis('off')
