@@ -55,7 +55,7 @@ def get_img(img_path):
     # return tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH])
 
 
-def get_birds_tf_dataset(data, augmentation=False):
+def get_birds_tf_dataset(data, augmentation=False, aspect_ratio=False):
     """
     This method builds an input pipeline for the birds dataset images applying optional data augmentation
     :param data: Dataframe with the class labels and image paths
@@ -72,7 +72,7 @@ def get_birds_tf_dataset(data, augmentation=False):
                                                    tf.one_hot(label-1, N_CLASSES)))
 
     if augmentation:
-        dataset = augment_dataset(dataset)
+        dataset = augment_dataset(dataset, aspect_ratio)
 
     # Normalization and resizing ______________
     dataset = dataset.map(lambda img, label: (tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH]), label))
@@ -88,7 +88,7 @@ def rotate_tf(image):
 
     # Outputs random values from a uniform distribution, where minval = pi/4 and maxval = pi/4
     if image.shape.__len__() == 3:
-        random_angles = tf.random.uniform(shape=(), minval=-np.pi / 4, maxval=np.pi / 4)
+        random_angles = tf.random.uniform(shape=(), minval=-np.pi / 6, maxval=np.pi / 6)
 
     return tfa.image.rotate(image, random_angles)
 
@@ -107,9 +107,15 @@ def crop_resize(img):
     output = tf.image.crop_and_resize(img, boxes, box_indices, CROP_SIZE)
     return output[0]
 
-def augment_dataset(dataset):
+def augment_dataset(dataset, aspect_ratio = False):
     # Possible augmentations to perform __________________
 
+    # Keep the aspect ratio filling the gaps with padding
+    if aspect_ratio:
+        target_height, target_width = 200, 200
+        dataset = dataset.map(lambda img, label: (tf.clip_by_value(tf.image.resize_with_pad(
+                                                      img,  target_height, target_width, method=tf.image.ResizeMethod.GAUSSIAN, antialias=True)
+                                                      , 0.0, 1.0), label))
     # Horizontal flip
     dataset = dataset.concatenate(dataset.map(lambda img, label: (tf.image.flip_left_right(img), label)))
 
@@ -120,13 +126,13 @@ def augment_dataset(dataset):
     dataset = dataset.concatenate(dataset.map(lambda img, label:
                                               (tf.clip_by_value(tf.image.random_brightness(img, 0.3, seed=None),0.0, 1.0), label)))
 
-    # Croping
-    dataset = dataset.concatenate(dataset.map(lambda img, label: (crop_resize(img), label)))
-
     # Rotation flip
-    dataset = dataset.concatenate(dataset.map(lambda img, label: (rotate_tf(img), label)))
+    rotated_dataset = dataset.map(lambda img, label: (rotate_tf(img), label))
 
+    # Croping
+    cropped_dataset = rotated_dataset.map(lambda img, label: (crop_resize(img), label))
 
+    dataset = dataset.concatenate(cropped_dataset)
     return dataset
 
 
