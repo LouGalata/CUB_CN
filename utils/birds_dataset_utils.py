@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
+import tensorflow_addons as tfa
+
+
+
 DATASET_PATH = "CUB_200_2011/"
 IMAGES_PATH = os.path.join(DATASET_PATH, "images")
 
@@ -51,7 +55,7 @@ def get_img(img_path):
     # return tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH])
 
 
-def get_birds_tf_dataset(data, rand_saturation=True, horizontal_flip=True):
+def get_birds_tf_dataset(data, augmentation=False):
     """
     This method builds an input pipeline for the birds dataset images applying optional data augmentation
     :param data: Dataframe with the class labels and image paths
@@ -67,15 +71,8 @@ def get_birds_tf_dataset(data, rand_saturation=True, horizontal_flip=True):
     dataset = dataset.map(lambda img_path, label: (get_img(img_path),
                                                    tf.one_hot(label-1, N_CLASSES)))
 
-    # Possible augmentations to perform __________________
-    # Change of saturation
-    if rand_saturation:
-        sat_dataset = dataset.map(lambda img, label: (tf.image.random_saturation(img, lower=0.2, upper=1.8, seed=103),
-                                                      label))
-        dataset = dataset.concatenate(sat_dataset)
-    # Horizontal flip
-    if horizontal_flip:
-        dataset = dataset.concatenate(dataset.map(lambda img, label: (tf.image.flip_left_right(img), label)))
+    if augmentation:
+        dataset = augment_dataset(dataset)
 
     # Normalization and resizing ______________
     dataset = dataset.map(lambda img, label: (tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH]), label))
@@ -84,9 +81,53 @@ def get_birds_tf_dataset(data, rand_saturation=True, horizontal_flip=True):
     return dataset
 
 
+@tf.function
+def rotate_tf(image):
+    if image.shape.__len__() == 4:
+        random_angles = tf.random.uniform(shape=(tf.shape(image)[0],), minval=-np.pi / 4, maxval=np.pi / 4)
+
+    # Outputs random values from a uniform distribution, where minval = pi/4 and maxval = pi/4
+    if image.shape.__len__() == 3:
+        random_angles = tf.random.uniform(shape=(), minval=-np.pi / 4, maxval=np.pi / 4)
+
+    return tfa.image.rotate(image, random_angles)
+
+
+def crop_resize(img):
+    BATCH_SIZE = 1
+    NUM_BOXES = 1
+    CROP_SIZE = (128, 128)
+
+    img = tf.expand_dims(img, 0)
+    left_corner = tf.random.uniform(shape=(NUM_BOXES, 2), minval=0.05, maxval=0.2)
+    right_corner = tf.random.uniform(shape=(NUM_BOXES, 2), minval=0.8, maxval=0.95)
+
+    boxes = tf.concat((left_corner, right_corner), axis=1)
+    box_indices = tf.random.uniform(shape=(NUM_BOXES,), minval=0, maxval=BATCH_SIZE, dtype=tf.int32)
+    output = tf.image.crop_and_resize(img, boxes, box_indices, CROP_SIZE)
+    return output[0]
+
 def augment_dataset(dataset):
-    horizontal_flip = dataset.map(lambda img, label: (tf.image.flip_left_right(img), label))
-    return horizontal_flip
+    # Possible augmentations to perform __________________
+
+    # Horizontal flip
+    dataset = dataset.concatenate(dataset.map(lambda img, label: (tf.image.flip_left_right(img), label)))
+
+    # Change of saturation
+    dataset = dataset.concatenate(dataset.map(lambda img, label:
+                                                  (tf.image.random_saturation(img, lower=1.5, upper=2.0, seed=103),label)))
+    # Brightness
+    dataset = dataset.concatenate(dataset.map(lambda img, label:
+                                              (tf.clip_by_value(tf.image.random_brightness(img, 0.3, seed=None),0.0, 1.0), label)))
+
+    # Croping
+    dataset = dataset.concatenate(dataset.map(lambda img, label: (crop_resize(img), label)))
+
+    # Rotation flip
+    dataset = dataset.concatenate(dataset.map(lambda img, label: (rotate_tf(img), label)))
+
+
+    return dataset
 
 
 def load_dataset():
