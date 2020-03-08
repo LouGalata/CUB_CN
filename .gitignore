@@ -1,1 +1,4 @@
 /CUB_200_2011/
+*.ini
+/hyper-param-search/logs/
+*.pyc

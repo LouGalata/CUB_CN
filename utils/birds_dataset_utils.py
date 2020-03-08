@@ -107,7 +107,15 @@ def load_dataset():
     train_df = dataset_df[dataset_df["is_train"] == 1]
     test_df = dataset_df[dataset_df["is_train"] == 0]
 
+    # Generate validation set with samples of all classes
+    val_df = pd.DataFrame([], columns=train_df.columns)
+    for class_id in range(1, 201):
+        class_samples = train_df[train_df["class_label"] == class_id].sample(n=4)
+        val_df = pd.concat((val_df, class_samples), axis=0)
+
+    train_df = train_df.drop(val_df.index)
+
     classes_df = pd.read_csv(DATASET_PATH + "classes.txt", header=None, sep=" ", index_col=0,
                              names=["class"])
 
-    return train_df, test_df, classes_df
+    return train_df, val_df, test_df, classes_df

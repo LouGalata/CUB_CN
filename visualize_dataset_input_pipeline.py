@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 # %tensorflow_version 2.x
 import tensorflow as tf
+import tensorflow_datasets as tfds
 
 # %load_ext tensorboard
 # %load_ext autoreload
@@ -24,20 +25,38 @@ if __name__ == "__main__":
     current_dir = os.getcwd()
     print("Current directory is ", current_dir)
 
-    train_df, test_df, classes_df = dataset_utils.load_dataset()
-    print("Training dataset_df contains %d images_paths" % train_df.shape[0])
-    print(train_df.sample(5))
-    print("Test dataset_df contains %d images_paths" % test_df.shape[0])
-    print(test_df.sample(5))
-    print("Existing classes ")
-    print(classes_df.head(5))
+    # train_df, val_df, test_df, classes_df = dataset_utils.load_dataset()
+    # pd.DataFrame.hist(train_df, bins=200, column="class_label")
+    # plt.title("Training set class distribution")
+    # plt.show()
+    # pd.DataFrame.hist(test_df, bins=200, column="class_label")
+    # plt.title("Testing set class distribution")
+    # plt.show()
+    # print("Training dataset_df contains %d images_paths" % train_df.shape[0])
+    # print("Validation dataset_df contains %d images_paths" % val_df.shape[0])
+    # print(train_df.sample(5))
+    # print("Test dataset_df contains %d images_paths" % test_df.shape[0])
+    # # print(test_df.sample(5))
+    # print("Existing classes ")
+    # print(classes_df.head(5))
 
-    birds_tf_dataset = dataset_utils.get_birds_tf_dataset(train_df.head(6),
-                                                          rand_saturation=True,
-                                                          horizontal_flip=True)
+    # birds_tf_dataset = dataset_utils.get_birds_tf_dataset(train_df.head(6),
+    #                                                       rand_saturation=True,
+    #                                                       horizontal_flip=True)
+    #
+    # batch_size = 32  # 32 # 64
+    # # Show original image resized samples
+    # birds_tf_dataset = birds_tf_dataset.batch(batch_size)
+    # image_batch, label_batch = next(iter(birds_tf_dataset))
+    # dataset_utils.show_batch(image_batch.numpy(), label_batch.numpy())
+    #
+    # Construct a tf.data.Dataset
+    dataset, dataset_info = tfds.load(name="caltech_birds2011", download=False,
+                                      data_dir="tf_CUB_200_2011", split="false", with_info=True)
 
-    batch_size = 32  # 32 # 64
-    # Show original image resized samples
-    birds_tf_dataset = birds_tf_dataset.batch(batch_size)
-    image_batch, label_batch = next(iter(birds_tf_dataset))
-    dataset_utils.show_batch(image_batch.numpy(), label_batch.numpy())
+    # Build your input pipeline
+    dataset = dataset.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
+    for features in dataset.take(1):
+        image, label, mask = features["image"], features["label"], features['segmentation_mask']
+
+        break
