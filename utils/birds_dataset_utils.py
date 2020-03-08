@@ -1,8 +1,10 @@
 import tensorflow as tf
+import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
+
 DATASET_PATH = "CUB_200_2011/"
 IMAGES_PATH = os.path.join(DATASET_PATH, "images")
 
@@ -27,10 +29,10 @@ def denormalize_img(img):
 def show_batch(image_batch, label_batch):
     batch_size = image_batch.shape[0]
 
-    columns = int(batch_size/6)
+    columns = int(batch_size / 6)
     columns += 1 if (batch_size % 6) > 1 else 0
 
-    plt.figure(figsize=(15, columns*2.5))
+    plt.figure(figsize=(15, columns * 2.5))
     for n in range(batch_size):
         ax = plt.subplot(columns, 6, n + 1)
         plt.imshow(denormalize_img(image_batch[n]))
@@ -65,7 +67,7 @@ def get_birds_tf_dataset(data, rand_saturation=True, horizontal_flip=True):
     dataset = tf.data.Dataset.from_tensor_slices((imagepaths, labels))
     # Load images and set one hot encoded labels
     dataset = dataset.map(lambda img_path, label: (get_img(img_path),
-                                                   tf.one_hot(label-1, N_CLASSES)))
+                                                   tf.one_hot(label - 1, N_CLASSES)))
 
     # Possible augmentations to perform __________________
     # Change of saturation
@@ -119,3 +121,17 @@ def load_dataset():
                              names=["class"])
 
     return train_df, val_df, test_df, classes_df
+
+
+def get_segmentation_dataset(tf_records_dir="CALTECH_BIRDS_2011"):
+    dataset = tfds.load(name="caltech_birds2011",
+                        data_dir=tf_records_dir,
+                        split=None,
+                        shuffle_files=False)
+    training_dataset = dataset['train']
+    test_dataset = dataset['train']
+
+    training_dataset = training_dataset.map(lambda x: (x['image'], tf.cast(x['segmentation_mask'], tf.bool)))
+    testing_dataset = test_dataset.map(lambda x: (x['image'], tf.cast(x['segmentation_mask'], tf.bool)))
+
+    return training_dataset, testing_dataset
