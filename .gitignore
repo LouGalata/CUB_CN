@@ -2,3 +2,5 @@
 *.ini
 /hyper-param-search/logs/
 *.pyc
+*.iml
+*.xml
