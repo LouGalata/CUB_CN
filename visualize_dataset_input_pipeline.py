@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # print("Existing classes ")
     # print(classes_df.head(5))
     #
-    birds_tf_dataset = dataset_utils.get_birds_tf_dataset(train_df, augmentation=True, aspect_ratio=True)
+    birds_tf_dataset = dataset_utils.get_birds_tf_dataset(train_df.take(6), augmentation=True, with_mask=True)
 
     #
     batch_size = 64 # 32 # 64
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                   loss=tf.keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
 
-    birds_tf_test_dataset = dataset_utils.get_birds_tf_dataset(test_df.take(200))
+    birds_tf_test_dataset = dataset_utils.get_birds_tf_dataset(test_df.take(6), with_mask=True)
     birds_tf_test_dataset = birds_tf_test_dataset.batch(batch_size)
 
     image_batch, label_batch = next(iter(birds_tf_test_dataset))
