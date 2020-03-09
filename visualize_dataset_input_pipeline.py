@@ -58,20 +58,26 @@ if __name__ == "__main__":
                             input_shape=(dataset_utils.IMG_HEIGHT, dataset_utils.IMG_WIDTH, dataset_utils.N_CHANNELS)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.Flatten())
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(dataset_utils.N_CLASSES))
+    # model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(dataset_utils.N_CLASSES, activation='softmax'))
 
     model.summary()
 
     model.compile(optimizer='adam',
-                  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+                  loss=tf.keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
 
     birds_tf_test_dataset = dataset_utils.get_birds_tf_dataset(test_df.take(200))
+    birds_tf_test_dataset = birds_tf_test_dataset.batch(batch_size)
 
-    history = model.fit(birds_tf_dataset, epochs=10,
-                        validation_data=birds_tf_test_dataset)
+    image_batch, label_batch = next(iter(birds_tf_test_dataset))
+    dataset_utils.show_batch(image_batch.numpy(), label_batch.numpy())
 
+    history = model.fit(
+        birds_tf_dataset.repeat(),
+        epochs=10,
+        steps_per_epoch=500,
+        validation_data=birds_tf_test_dataset.repeat(),
+        validation_steps=2
+    )

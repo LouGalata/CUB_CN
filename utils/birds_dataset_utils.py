@@ -84,6 +84,9 @@ def get_birds_tf_dataset(dataset, augmentation=False, aspect_ratio=False):
     dataset = dataset.map(lambda img, label: (tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH]), label))
     dataset = dataset.map(lambda img, label: (normalize_img(img), label))
 
+    #One Hot encoding in labels
+    dataset = dataset.map(lambda img, label: (img, tf.one_hot(label, N_CLASSES)))
+
     return dataset
 
 
