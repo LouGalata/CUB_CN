@@ -76,6 +76,7 @@ def get_birds_tf_dataset(dataset, augmentation=False, with_mask=False):
 
     return dataset
 
+
 def load_dataset():
     # Load image labels, training/test label and file path.
     train_labels = pd.read_csv(DATASET_PATH + "image_class_labels.txt", header=None, sep=" ",

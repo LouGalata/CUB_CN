@@ -5,17 +5,19 @@ from tensorboard.plugins.hparams import api as hp
 
 import numpy as np
 import os
-import utils.birds_dataset_utils as birds_dataset_utils
+import utils.birds_dataset_utils as dataset_utils
+
+# import utils.birds_dataset_utils as dataset_utils
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 
 def get_cnn_model(dropout, depth):
-    IMG_HEIGHT = birds_dataset_utils.IMG_HEIGHT
-    IMG_WIDTH = birds_dataset_utils.IMG_WIDTH
-    N_CHANNELS = birds_dataset_utils.N_CHANNELS
-    N_CLASSES = birds_dataset_utils.N_CLASSES
+    IMG_HEIGHT = dataset_utils.IMG_HEIGHT
+    IMG_WIDTH = dataset_utils.IMG_WIDTH
+    N_CHANNELS = dataset_utils.N_CHANNELS
+    N_CLASSES = dataset_utils.N_CLASSES
 
     internal_cn_layers = []
     kernels_depth = [[16], [16, 32], [16, 32, 64]]
@@ -44,25 +46,24 @@ def get_cnn_model(dropout, depth):
 
 
 if __name__ == '__main__':
-    # Load the dataset_df
-    train_df, val_df, test_df, classes_df = birds_dataset_utils.load_dataset()
+    tf.test.is_gpu_available()
+    tf.test.gpu_device_name()
 
-    training_dataset = birds_dataset_utils.get_birds_tf_dataset(train_df.sample(100),
-                                                                rand_saturation=True,
-                                                                horizontal_flip=True)
-    validation_dataset = birds_dataset_utils.get_birds_tf_dataset(val_df,
-                                                                  rand_saturation=False,
-                                                                  horizontal_flip=False)
+
+    train_dataset, test_dataset = dataset_utils.get_segmentation_dataset()
+    train_dataset = dataset_utils.get_birds_tf_dataset(train_dataset, augmentation=True, with_mask=True)
+    test_dataset = dataset_utils.get_birds_tf_dataset(test_dataset, augmentation=False, with_mask=True)
+
     batch_size = 32
-    training_dataset = training_dataset.batch(32)
-    validation_dataset = validation_dataset.batch(32)
+    training_dataset = train_dataset.take(6).batch(batch_size)
+    validation_dataset = test_dataset.take(700).batch(batch_size)
 
     # Set hyper parameter search
     HP_LR = hp.HParam('learning_rate', hp.RealInterval(0.00001, 0.001))
     HP_DROPOUT = hp.HParam('dropout', hp.Discrete([.2, .3, .4, .5]))
     HP_DEPTH = hp.HParam('net_depth', hp.Discrete([1, 2, 3]))
 
-    hparams_log_dir = os.path.join("hyper-param-search", "logs")
+    hparams_log_dir = os.path.join("hyper-param-search", "logs/with_mask")
     hparams_writer = tf.summary.create_file_writer(hparams_log_dir)
     with hparams_writer.as_default():
         hp.hparams_config(
@@ -74,7 +75,6 @@ if __name__ == '__main__':
             ])
 
     epochs = 100
-    batch_size = 32
     for dropout in HP_DROPOUT.domain.values:
         for depth in HP_DEPTH.domain.values:
             for lr in np.linspace(HP_LR.domain.max_value, HP_LR.domain.min_value, 4):
@@ -97,7 +97,7 @@ if __name__ == '__main__':
                 model.reset_states()
                 model.fit(training_dataset,
                           validation_data=validation_dataset,
-                          epochs=3,
+                          epochs=epochs,
                           callbacks=[tf.keras.callbacks.TerminateOnNaN(),
                                      tf.keras.callbacks.TensorBoard(logdir,
                                                                     update_freq='batch',

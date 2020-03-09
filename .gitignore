@@ -4,3 +4,6 @@
 *.pyc
 *.iml
 *.xml
+/.idea/
+/CALTECH_BIRDS_2011/
+/guided-part/
