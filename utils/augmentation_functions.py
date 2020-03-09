@@ -75,7 +75,6 @@ def get_brightness_img(img, with_mask):
         return tf.clip_by_value(tf.image.random_brightness(img, 0.3, seed=None), 0.0, 1.0)
 
 def stuck_img_with_mask(img, mask):
-
     mask = tf.image.grayscale_to_rgb(mask)
     img = tf.stack([img, mask], axis=3)
     return img
@@ -85,7 +84,7 @@ def augment_dataset(dataset, with_mask=True):
     # Possible augmentations to perform __________________
 
     if with_mask:
-        dataset = dataset.map(lambda img, mask, label: (stuck_img_with_mask(img, mask), label))
+        dataset = dataset.map(lambda image, segmentation_mask, label: (stuck_img_with_mask(image, segmentation_mask), label))
         # Keep the aspect ratio filling the gaps with padding
 
         dataset = dataset.map(lambda img, label: (get_aspect_ratio(img, with_mask),label))

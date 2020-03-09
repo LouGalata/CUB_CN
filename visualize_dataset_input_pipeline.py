@@ -42,3 +42,16 @@ if __name__ == "__main__":
     image_batch, label_batch = next(iter(birds_tf_dataset))
     dataset_utils.show_batch(image_batch.numpy(), label_batch.numpy())
 
+
+
+    # # Construct a tf.data.Dataset
+    # dataset, dataset_info = tfds.load(name="caltech_birds2011", download=False,
+    #                                   data_dir="tf_CUB_200_2011", split="false", with_info=True)
+
+
+    # # Build your input pipeline
+    # dataset = dataset.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
+    # for features in dataset.take(1):
+    #     image, label, mask = features["image"], features["label"], features['segmentation_mask']
+    #
+    #     break

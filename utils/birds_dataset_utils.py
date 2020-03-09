@@ -44,14 +44,14 @@ def show_batch(image_batch, label_batch):
     plt.show()
 
 
-def get_img(img_path):
-    img = tf.io.read_file(img_path)
-    # convert the compressed string to a 3D uint8 tensor
-    img = tf.image.decode_jpeg(img, channels=3)
-    # Use `convert_image_dtype` to convert to floats in the [0,1] range.
-    img = tf.image.convert_image_dtype(img, tf.float32)
-    # resize the image to the desired size.
-    return img
+# def get_img(img_path):
+#     img = tf.io.read_file(img_path)
+#     # convert the compressed string to a 3D uint8 tensor
+#     img = tf.image.decode_jpeg(img, channels=3)
+#     # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+#     img = tf.image.convert_image_dtype(img, tf.float32)
+#     # resize the image to the desired size.
+#     return img
     # return tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH])
 
 
@@ -75,7 +75,6 @@ def get_birds_tf_dataset(dataset, augmentation=False, with_mask=False):
     dataset = dataset.map(lambda img, label: (img, tf.one_hot(label, N_CLASSES)))
 
     return dataset
-
 
 def load_dataset():
     # Load image labels, training/test label and file path.
