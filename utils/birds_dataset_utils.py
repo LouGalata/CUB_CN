@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 import utils.augmentation_functions as augmentation_utils
+import cv2
 
 
 DATASET_PATH = "CUB_200_2011/"
@@ -28,7 +29,7 @@ def denormalize_img(img):
     return tf.math.add(img * std, mean)
 
 
-def show_batch(image_batch, label_batch):
+def show_batch(image_batch, mask_batch, label_batch):
     batch_size = image_batch.shape[0]
 
     columns = int(batch_size / 6)
@@ -40,6 +41,15 @@ def show_batch(image_batch, label_batch):
         plt.imshow(denormalize_img(image_batch[n]))
         plt.title("[%d]" % (np.argmax(label_batch[n]) + 1))
         plt.axis('on')
+
+    plt.show()
+
+    for n in range(batch_size):
+        ax = plt.subplot(columns, 6, n + 1)
+        mask_rgb = cv2.cvtColor(mask_batch[n], cv2.COLOR_GRAY2RGB)
+        plt.imshow(mask_rgb)
+        plt.title("[%d]" % (np.argmax(label_batch[n]) + 1))
+        plt.axis('off')
 
     plt.show()
 
@@ -56,23 +66,19 @@ def show_batch(image_batch, label_batch):
 
 
 def get_birds_tf_dataset(dataset, augmentation=False, with_mask=False):
-    if augmentation:  # TRAIN DATASET
+    if augmentation:
         dataset = augmentation_utils.augment_dataset(dataset, with_mask)
-    elif with_mask: # TEST DATASET WITH MASK
-        dataset = dataset.map(lambda img, mask, label: (augmentation_utils.stuck_img_with_mask(img, mask), label))
-        dataset = dataset.map(lambda img, label: (augmentation_utils.get_aspect_ratio(img, with_mask), label))
-        dataset = dataset.map(lambda img, label: (augmentation_utils.get_segmented_image(img), label))
-    else: # TEST DATASET WITH NO MASK
-        dataset = dataset.map(lambda img, mask, label: (img, label))
-        dataset = dataset.map(lambda img, label: (augmentation_utils.get_aspect_ratio(img, with_mask), label))
+
+    if with_mask:
+        dataset=dataset.map(get_segmented_image)
 
 
     # Normalization and resizing ______________
-    dataset = dataset.map(lambda img, label: (tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH]), label))
-    dataset = dataset.map(lambda img, label: (normalize_img(img), label))
+    dataset = dataset.map(lambda img, mask, label: (tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH]), tf.image.resize(mask, [IMG_HEIGHT, IMG_WIDTH]),label))
+    dataset = dataset.map(lambda img, mask, label: (normalize_img(img), mask, label))
 
     #One Hot encoding in labels
-    dataset = dataset.map(lambda img, label: (img, tf.one_hot(label, N_CLASSES)))
+    dataset = dataset.map(lambda img, mask, label: (img, mask, tf.one_hot(label, N_CLASSES)))
 
     return dataset
 
@@ -132,7 +138,7 @@ def get_segmentation_dataset(tf_records_dir="CALTECH_BIRDS_2011", with_info=Fals
         return training_dataset, test_dataset
 
 
-def get_segmented_tst_image_with_mask(img, mask):
-    mask = tf.cast(mask, dtype=tf.float32)
-    result = tf.math.multiply(img, mask)
-    return result
+def get_segmented_image(img, mask, label):
+    # mask = tf.cast(mask, dtype=tf.float32)
+    img = tf.math.multiply(img, mask)
+    return img, mask, label
