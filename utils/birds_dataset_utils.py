@@ -44,6 +44,9 @@ def show_batch(image_batch, mask_batch, label_batch):
 
     plt.show()
 
+    columns = int(batch_size / 6)
+    columns += 1 if (batch_size % 6) > 1 else 0
+    plt.figure(figsize=(15, columns * 2.5))
     for n in range(batch_size):
         ax = plt.subplot(columns, 6, n + 1)
         mask_rgb = cv2.cvtColor(mask_batch[n], cv2.COLOR_GRAY2RGB)

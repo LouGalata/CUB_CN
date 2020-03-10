@@ -1,6 +1,6 @@
+import numpy as np
 import scipy.ndimage as ndimage
 import tensorflow as tf
-import numpy as np
 
 
 def random_rotate_image_mask(image, mask):
@@ -15,14 +15,14 @@ def random_rotate_image(image):
     image = ndimage.rotate(image, random, reshape=False)
     return image
 
+
 def tf_random_rotate_image(image, mask, label):
     im_shape = image.shape
     mask_shape = mask.shape
-    [image, mask, ] = tf.py_function(random_rotate_image_mask, [image, mask], [tf.float32,tf.float32])
+    [image, mask, ] = tf.py_function(random_rotate_image_mask, [image, mask], [tf.float32, tf.float32])
     image.set_shape(im_shape)
     mask.set_shape(mask_shape)
     return tf.clip_by_value(image, 0.0, 1.0), tf.clip_by_value(mask, 0.0, 1.0), label
-
 
 
 def crop_resize(img, mask, label):
@@ -30,8 +30,8 @@ def crop_resize(img, mask, label):
     NUM_BOXES = tf.constant(1, dtype=tf.int32)
     CROP_SIZE = (tf.constant(128, dtype=tf.int32), tf.constant(128, dtype=tf.int32))
 
-    img = tf.expand_dims(img,0)
-    mask = tf.expand_dims(mask,0)
+    img = tf.expand_dims(img, 0)
+    mask = tf.expand_dims(mask, 0)
     left_corner = tf.random.uniform(shape=(NUM_BOXES, 2), minval=0.05, maxval=0.2)
     right_corner = tf.random.uniform(shape=(NUM_BOXES, 2), minval=0.8, maxval=0.95)
 
@@ -83,4 +83,3 @@ def augment_dataset(dataset, with_mask=True):
     cropped_dataset = rotated_dataset.map(crop_resize)
     dataset = dataset.concatenate(cropped_dataset)
     return dataset
-
