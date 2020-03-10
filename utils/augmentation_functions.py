@@ -65,7 +65,7 @@ def stuck_img_with_mask(img, mask):
 
 
 # Possible augmentations to perform __________________
-def augment_dataset(dataset, with_mask=True):
+def augment_dataset(dataset):
     # Horizontal flip
     dataset = dataset.concatenate(dataset.map(get_masked_horizontal_flip))
 
@@ -75,7 +75,7 @@ def augment_dataset(dataset, with_mask=True):
 
     # Brightness
     brightness_dataset = dataset.map(get_brightness_img)
-    dataset = brightness_dataset.concatenate(saturated_dataset)
+    dataset = brightness_dataset.concatenate(brightness_dataset)
 
     # Rotation flip
     rotated_dataset = dataset.map(tf_random_rotate_image)

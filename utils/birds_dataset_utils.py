@@ -29,7 +29,7 @@ def denormalize_img(img):
     return tf.math.add(img * std, mean)
 
 
-def show_batch(image_batch, mask_batch, label_batch):
+def show_batch(image_batch, mask_batch, label_batch, show_mask=False):
     batch_size = image_batch.shape[0]
 
     columns = int(batch_size / 6)
@@ -40,21 +40,22 @@ def show_batch(image_batch, mask_batch, label_batch):
         ax = plt.subplot(columns, 6, n + 1)
         plt.imshow(denormalize_img(image_batch[n]))
         plt.title("[%d]" % (np.argmax(label_batch[n]) + 1))
-        plt.axis('on')
-
-    plt.show()
-
-    columns = int(batch_size / 6)
-    columns += 1 if (batch_size % 6) > 1 else 0
-    plt.figure(figsize=(15, columns * 2.5))
-    for n in range(batch_size):
-        ax = plt.subplot(columns, 6, n + 1)
-        mask_rgb = cv2.cvtColor(mask_batch[n], cv2.COLOR_GRAY2RGB)
-        plt.imshow(mask_rgb)
-        plt.title("[%d]" % (np.argmax(label_batch[n]) + 1))
         plt.axis('off')
 
     plt.show()
+
+    if show_mask:
+        columns = int(batch_size / 6)
+        columns += 1 if (batch_size % 6) > 1 else 0
+        plt.figure(figsize=(15, columns * 2.5))
+        for n in range(batch_size):
+            ax = plt.subplot(columns, 6, n + 1)
+            mask_rgb = cv2.cvtColor(mask_batch[n], cv2.COLOR_GRAY2RGB)
+            plt.imshow(mask_rgb)
+            plt.title("[%d]" % (np.argmax(label_batch[n]) + 1))
+            plt.axis('off')
+
+        plt.show()
 
 
 # def get_img(img_path):
@@ -70,10 +71,10 @@ def show_batch(image_batch, mask_batch, label_batch):
 
 def get_birds_tf_dataset(dataset, augmentation=False, with_mask=False):
     if augmentation:
-        dataset = augmentation_utils.augment_dataset(dataset, with_mask)
+        dataset = augmentation_utils.augment_dataset(dataset)
 
     if with_mask:
-        dataset=dataset.map(get_segmented_image)
+        dataset = dataset.map(get_segmented_image)
 
 
     # Normalization and resizing ______________
