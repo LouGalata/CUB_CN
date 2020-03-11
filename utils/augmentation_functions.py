@@ -49,12 +49,12 @@ def get_masked_horizontal_flip(img, mask, label):
 
 
 def get_saturated_img(img, mask, label):
-    img = tf.image.random_saturation(img, lower=1.5, upper=2.0, seed=103)
+    img = tf.image.random_saturation(img, lower=1.8, upper=3.0, seed=103)
     return img, mask, label
 
 
 def get_brightness_img(img, mask, label):
-    img = tf.clip_by_value(tf.image.random_brightness(img, 0.3, seed=None), 0.0, 1.0)
+    img = tf.clip_by_value(tf.image.random_brightness(img, 0.3, seed=10), 0.0, 1.0)
     return img, mask, label
 
 
@@ -67,19 +67,19 @@ def stuck_img_with_mask(img, mask):
 # Possible augmentations to perform __________________
 def augment_dataset(dataset):
     # Horizontal flip
-    dataset = dataset.concatenate(dataset.map(get_masked_horizontal_flip))
+    dataset = dataset.concatenate(dataset.map(get_masked_horizontal_flip, num_parallel_calls=tf.data.experimental.AUTOTUNE))
 
     # Change of saturation
-    saturated_dataset = dataset.map(get_saturated_img)
-    dataset = dataset.concatenate(saturated_dataset)
+    # saturated_dataset = dataset.map(get_saturated_img)
+    # dataset = dataset.concatenate(saturated_dataset)
 
     # Brightness
-    brightness_dataset = dataset.map(get_brightness_img)
+    brightness_dataset = dataset.map(get_brightness_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = brightness_dataset.concatenate(brightness_dataset)
 
     # Rotation flip
-    rotated_dataset = dataset.map(tf_random_rotate_image)
+    rotated_dataset = dataset.map(tf_random_rotate_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     # Croping
-    cropped_dataset = rotated_dataset.map(crop_resize)
+    cropped_dataset = rotated_dataset.map(crop_resize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.concatenate(cropped_dataset)
     return dataset

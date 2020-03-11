@@ -120,6 +120,8 @@ def load_dataset(shuffle=True):
     val_dataset = tf_dataset_from_dataframe(val_df)
     test_dataset = tf_dataset_from_dataframe(test_df)
 
+    train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
     return train_dataset, val_dataset, test_dataset, classes_df
 
 
@@ -131,7 +133,9 @@ def tf_dataset_from_dataframe(data_df):
     dataset = tf.data.Dataset.from_tensor_slices((img_paths, seg_img_paths, labels))
     dataset = dataset.map(lambda img_path, mask_path, label: (get_img(img_path, channels=3, dtype=tf.float32),
                                                               get_mask(mask_path, channels=1, dtype=tf.float32),
-                                                              label))
+                                                              label),
+                          num_parallel_calls=tf.data.experimental.AUTOTUNE
+                          )
     return dataset
 
 
@@ -157,34 +161,40 @@ def get_mask(img_path, channels=1, dtype=tf.float32):
     return img
 
 
-#@tf.function
+# @tf.function
 def get_segmented_image(img, mask, label):
     # mask = tf.cast(mask, dtype=tf.float32)
     img = tf.math.multiply(img, mask, name="mask_application")
     return img, mask, label
 
 
-@DeprecationWarning
+# @DeprecationWarning
 def load_tf_records(tf_records_dir="CALTECH_BIRDS_2011", with_info=False):
     dataset, info = tfds.load(name="caltech_birds2011",
                               data_dir=tf_records_dir,
                               split=None,
-                              shuffle_files=False, with_info=True)
-    training_dataset = dataset['train']
-    test_dataset = dataset['test']
+                              shuffle_files=False,
+                              with_info=True)
+
+    train_dataset = dataset['train'].repeat()
+    test_dataset = dataset['test'].repeat()
 
     # Extract (image, mask, label) tuples
-    training_dataset = training_dataset.map(lambda x:
+    train_dataset = train_dataset.map(lambda x:
                                             (tf.image.convert_image_dtype(x['image'], tf.float32),
                                              tf.cast(tf.cast(x['segmentation_mask'], tf.bool), tf.float32),
-                                             tf.cast(x['label'], tf.int32)))
+                                             tf.cast(x['label'], tf.int32)),
+                                      num_parallel_calls=tf.data.experimental.AUTOTUNE
+                                      )
     test_dataset = test_dataset.map(lambda x:
                                     (tf.image.convert_image_dtype(x['image'], tf.float32),
                                      tf.cast(tf.cast(x['segmentation_mask'], tf.bool), tf.float32),
-                                     tf.cast(x['label'], tf.int32)))
+                                     tf.cast(x['label'], tf.int32)),
+                                    num_parallel_calls=tf.data.experimental.AUTOTUNE
+                                    )
 
     if with_info:
-        return training_dataset, test_dataset, info
+        return train_dataset, test_dataset, info
     else:
-        return training_dataset, test_dataset
+        return train_dataset, test_dataset
 
