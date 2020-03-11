@@ -12,22 +12,21 @@ DATASET_PATH = "CUB_200_2011"
 IMAGES_PATH = os.path.join(DATASET_PATH, "images")
 SEGMENTATION_PATH = os.path.join(DATASET_PATH, "segmentations")
 
-IMG_HEIGHT = tf.constant(128, dtype=tf.int32)
-IMG_WIDTH = tf.constant(128, dtype=tf.int32)
-N_CHANNELS = tf.constant(3, dtype=tf.int32)
-N_CLASSES = tf.constant(200, dtype=tf.int32)
+N_CLASSES = 200
 
 # mean = tf.constant([0.431776, 0.499619, 0.485914], dtype=tf.float32)
 mean = tf.constant([0.43174747, 0.49959317, 0.48588511], dtype=tf.float32)
 std = tf.constant([0.035313280220033036, 0.025757838145434496, 0.026814294497459704], dtype=tf.float32)
 
 
+#@tf.function
 def normalize_img(img):
-    return tf.divide(img - mean, std)
+    return tf.divide(img - mean, std, name="normalize")
 
 
+#@tf.function
 def denormalize_img(img):
-    return tf.math.add(img * std, mean)
+    return tf.math.add(img * std, mean, name="denormalize")
 
 
 def show_batch(image_batch, mask_batch, label_batch, show_mask=False):
@@ -59,7 +58,8 @@ def show_batch(image_batch, mask_batch, label_batch, show_mask=False):
         plt.show()
 
 
-def pre_process_dataset(dataset, augmentation=False, with_mask=False):
+#@tf.function
+def pre_process_dataset(dataset, augmentation=False, with_mask=False, img_height=128, img_width=128):
     if augmentation:
         dataset = augmentation_utils.augment_dataset(dataset)
 
@@ -67,8 +67,8 @@ def pre_process_dataset(dataset, augmentation=False, with_mask=False):
         dataset = dataset.map(get_segmented_image)
 
     # Normalization and resizing ______________
-    dataset = dataset.map(lambda img, mask, label: (tf.image.resize(img, [IMG_HEIGHT, IMG_WIDTH]),
-                                                    tf.image.resize(mask, [IMG_HEIGHT, IMG_WIDTH]),
+    dataset = dataset.map(lambda img, mask, label: (tf.image.resize(img, [img_height, img_width]),
+                                                    tf.image.resize(mask, [img_height, img_width]),
                                                     label))
     dataset = dataset.map(lambda img, mask, label: (normalize_img(img), mask, label))
 
@@ -78,7 +78,7 @@ def pre_process_dataset(dataset, augmentation=False, with_mask=False):
     return dataset
 
 
-def load_dataset():
+def load_dataset(shuffle=True):
     # Load image labels, training/test label and file path.
     train_labels = pd.read_csv(os.path.join(DATASET_PATH, "image_class_labels.txt"), header=None, sep=" ",
                                index_col=0, names=["class_label"])
@@ -110,6 +110,11 @@ def load_dataset():
     classes_df = pd.read_csv(os.path.join(DATASET_PATH, "classes.txt"), header=None, sep=" ", index_col=0,
                              names=["class"])
 
+    if shuffle:
+        train_df = train_df.sample(frac=1)
+        val_df = val_df.sample(frac=1)
+        test_df = test_df.sample(frac=1)
+
     # Generate Dataset V2 input pipeline
     train_dataset = tf_dataset_from_dataframe(train_df)
     val_dataset = tf_dataset_from_dataframe(val_df)
@@ -130,6 +135,7 @@ def tf_dataset_from_dataframe(data_df):
     return dataset
 
 
+#@tf.function
 def get_img(img_path, channels=3, dtype=tf.float32):
     img = tf.io.read_file(img_path)
     # convert the compressed string to a 3D uint8 tensor
@@ -139,20 +145,22 @@ def get_img(img_path, channels=3, dtype=tf.float32):
     return img
 
 
+#@tf.function
 def get_mask(img_path, channels=1, dtype=tf.float32):
     img = tf.io.read_file(img_path)
     # convert the compressed string to a 3D uint8 tensor
     img = tf.image.decode_png(img, channels=channels)
     # Binarize mask
-    img = tf.cast(tf.cast(img, tf.bool), tf.float32)
+    img = tf.cast(tf.cast(img, tf.bool), tf.float32, name="binarize_img")
     # Use `convert_image_dtype` to convert to floats in the [0,1] range.
     img = tf.image.convert_image_dtype(img, dtype)
     return img
 
 
+#@tf.function
 def get_segmented_image(img, mask, label):
     # mask = tf.cast(mask, dtype=tf.float32)
-    img = tf.math.multiply(img, mask)
+    img = tf.math.multiply(img, mask, name="mask_application")
     return img, mask, label
 
 
