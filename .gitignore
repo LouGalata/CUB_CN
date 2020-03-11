@@ -7,3 +7,6 @@
 /.idea/
 /CALTECH_BIRDS_2011/
 /guided-part/
+*__pycache__
+*.zip
+*.tar
