@@ -20,7 +20,13 @@ def get_cnn_model(dropout, depth):
     N_CLASSES = dataset_utils.N_CLASSES
 
     internal_cn_layers = []
-    kernels_depth = [[16], [16, 32], [16, 32, 64], [16, 32, 64, 64]]
+
+    INITIAL_KERNELS = 32
+    kernels_depth = [[INITIAL_KERNELS],
+                     [INITIAL_KERNELS, INITIAL_KERNELS*2],
+                     [INITIAL_KERNELS, INITIAL_KERNELS*2, INITIAL_KERNELS*4],
+                     [INITIAL_KERNELS, INITIAL_KERNELS*2, INITIAL_KERNELS*4, INITIAL_KERNELS*4],
+                     [INITIAL_KERNELS, INITIAL_KERNELS*2, INITIAL_KERNELS*2, INITIAL_KERNELS*4, INITIAL_KERNELS*4]]
     for n_kernel, d in zip(kernels_depth[depth - 1], range(1, depth + 1)):
         internal_cn_layers.append(tf.keras.layers.Conv2D(n_kernel, 3, padding='same', name="conv_%d" % d))
         internal_cn_layers.append(tf.keras.layers.BatchNormalization(axis=-1, name="b_norm_%d" % d))
@@ -29,7 +35,7 @@ def get_cnn_model(dropout, depth):
 
     model = tf.keras.models.Sequential(name="awsome_net", layers=
         # Input layer
-        [tf.keras.layers.Conv2D(16, 3, padding='same', input_shape=(IMG_HEIGHT, IMG_WIDTH, 3), name="input_conv"),
+        [tf.keras.layers.Conv2D(INITIAL_KERNELS, 3, padding='same', input_shape=(IMG_HEIGHT, IMG_WIDTH, 3), name="input_conv"),
          tf.keras.layers.BatchNormalization(axis=-1, name="input_batch_normalization"),
          tf.keras.layers.ReLU(name="input_RELU"),
          tf.keras.layers.MaxPooling2D((2, 2)),
@@ -55,8 +61,8 @@ if __name__ == '__main__':
     MASK = True
 
     # Set hyper parameter search
-    HP_LR = hp.HParam('learning_rate', hp.RealInterval(0.00001, 0.001))
-    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.2, 0.5))
+    HP_LR = hp.HParam('learning_rate', hp.RealInterval(0.000001, 0.001))
+    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.5))
     HP_DEPTH = hp.HParam('net_depth', hp.IntInterval(1, 5))
     HP_MASK = hp.HParam('maked_imgs', hp.Discrete([False, True]))
 
@@ -75,10 +81,10 @@ if __name__ == '__main__':
 
     epochs = 100
     print(HP_MASK.domain.values)
-    for with_mask in [True, False]:
+    for with_mask in [False, True]:
         train_dataset, val_dataset, test_dataset, classes_df = dataset_utils.load_dataset(shuffle=True)
 
-        train_dataset = dataset_utils.pre_process_dataset(train_dataset, augmentation=True, with_mask=with_mask)
+        train_dataset = dataset_utils.pre_process_dataset(train_dataset, augmentation=False, with_mask=with_mask)
         test_dataset = dataset_utils.pre_process_dataset(test_dataset, with_mask=with_mask)
 
         train_dataset = drop_ground_truth_segmentation(train_dataset)
@@ -91,9 +97,9 @@ if __name__ == '__main__':
         # test_dataset = test_dataset.batch(BATCH_SIZE)
         # del(test_dataset)
 
-        for dropout in np.linspace(HP_DROPOUT.domain.max_value, HP_DROPOUT.domain.min_value, 2):
-            for depth in range(HP_DEPTH.domain.min_value, HP_DEPTH.domain.max_value):
-                for lr in np.linspace(HP_LR.domain.max_value, HP_LR.domain.min_value, 2):
+        for dropout in np.linspace(HP_DROPOUT.domain.max_value, 0, 3):
+            for depth in range(2, 5 + 1):
+                for lr in np.linspace(0.001, 0.00001, 5):
 
                     hparams = {
                         HP_DROPOUT: dropout,
@@ -102,7 +108,7 @@ if __name__ == '__main__':
                         HP_MASK: with_mask,
                     }
                     # Run log dir
-                    logdir = os.path.join(hparams_log_dir, "lr=%.5f-D=%.2f-depth=%d-mask:%d" % (lr, dropout, depth, with_mask))
+                    logdir = os.path.join(hparams_log_dir, "[32]lr=%.5f-D=%.2f-depth=%d-mask=%d" % (lr, dropout, depth, with_mask))
 
                     model = get_cnn_model(dropout=dropout, depth=depth)
 
@@ -122,7 +128,7 @@ if __name__ == '__main__':
                                                                         write_graph=False,
                                                                         histogram_freq=5),
                                          tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                          patience=5),
+                                                                          patience=10),
                                          hp.KerasCallback(logdir, hparams, trial_id=logdir),
                                          tf.keras.callbacks.ModelCheckpoint(
                                              filepath=os.path.join(logdir, "checkpoints", "cp.ckpt"),
