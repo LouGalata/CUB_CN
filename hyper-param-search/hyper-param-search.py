@@ -84,22 +84,22 @@ if __name__ == '__main__':
     for with_mask in [False, True]:
         train_dataset, val_dataset, test_dataset, classes_df = dataset_utils.load_dataset(shuffle=True)
 
-        train_dataset = dataset_utils.pre_process_dataset(train_dataset, augmentation=False, with_mask=with_mask)
+        train_dataset = dataset_utils.pre_process_dataset(train_dataset, augmentation=True, with_mask=with_mask)
         test_dataset = dataset_utils.pre_process_dataset(test_dataset, with_mask=with_mask)
 
         train_dataset = drop_ground_truth_segmentation(train_dataset)
         test_dataset = drop_ground_truth_segmentation(test_dataset)
 
         BATCH_SIZE = 32
-        train_dataset = train_dataset.batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
+        train_dataset = train_dataset.shuffle(5000).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
         # Use for now part of test set
         val_dataset = test_dataset.take(1000).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
         # test_dataset = test_dataset.batch(BATCH_SIZE)
         # del(test_dataset)
 
-        for dropout in np.linspace(HP_DROPOUT.domain.max_value, 0, 3):
+        for lr in np.linspace(0.001, 0.00001, 4):
             for depth in range(2, 5 + 1):
-                for lr in np.linspace(0.001, 0.00001, 5):
+                for dropout in np.linspace(0.3, 0, 2):
 
                     hparams = {
                         HP_DROPOUT: dropout,
@@ -108,7 +108,7 @@ if __name__ == '__main__':
                         HP_MASK: with_mask,
                     }
                     # Run log dir
-                    logdir = os.path.join(hparams_log_dir, "[32]lr=%.5f-D=%.2f-depth=%d-mask=%d" % (lr, dropout, depth, with_mask))
+                    logdir = os.path.join(hparams_log_dir, "[32][A]lr=%.5f-D=%.2f-depth=%d-mask=%d" % (lr, dropout, depth, with_mask))
 
                     model = get_cnn_model(dropout=dropout, depth=depth)
 

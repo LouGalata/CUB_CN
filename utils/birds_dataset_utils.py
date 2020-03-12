@@ -69,11 +69,11 @@ def pre_process_dataset(dataset, augmentation=False, with_mask=False, img_height
     # Normalization and resizing ______________
     dataset = dataset.map(lambda img, mask, label: (tf.image.resize(img, [img_height, img_width]),
                                                     tf.image.resize(mask, [img_height, img_width]),
-                                                    label))
-    dataset = dataset.map(lambda img, mask, label: (normalize_img(img), mask, label))
+                                                    label),
+                          num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    # One Hot encoding in labels
-    dataset = dataset.map(lambda img, mask, label: (img, mask, tf.one_hot(label, N_CLASSES)))
+    dataset = dataset.map(lambda img, mask, label: (normalize_img(img), mask, tf.one_hot(label, N_CLASSES)),
+                          num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     return dataset
 

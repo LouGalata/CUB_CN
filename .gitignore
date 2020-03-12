@@ -1,6 +1,6 @@
 /CUB_200_2011/
 *.ini
-/hyper-param-search/logs/
+/hyper-param-search/logs*
 *.pyc
 *.iml
 *.xml
@@ -10,3 +10,4 @@
 *__pycache__
 *.zip
 *.tar
+*.v2
