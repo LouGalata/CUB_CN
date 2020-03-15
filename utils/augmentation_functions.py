@@ -54,7 +54,7 @@ def get_saturated_img(img, mask, label):
 
 
 def get_brightness_img(img, mask, label):
-    img = tf.clip_by_value(tf.image.random_brightness(img, 0.3, seed=10), 0.0, 1.0)
+    img = tf.clip_by_value(tf.image.random_brightness(img, 0.2, seed=10), 0.0, 1.0)
     return img, mask, label
 
 

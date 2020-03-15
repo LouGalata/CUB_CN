@@ -16,31 +16,25 @@ if __name__ == "__main__":
     current_dir = os.getcwd()
     print("Current directory is ", current_dir)
 
-    train_dataset, test_dataset = dataset_utils.get_segmentation_dataset()
-    train_dataset = dataset_utils.get_birds_tf_dataset(train_dataset.take(6), augmentation=True, with_mask=True)
-    test_dataset = dataset_utils.get_birds_tf_dataset(test_dataset.take(6), with_mask=True)
+    train_dataset, val_dataset, test_dataset, classes_df = dataset_utils.load_dataset(shuffle=True)
 
+    train_dataset = dataset_utils.pre_process_dataset(train_dataset.take(6), augmentation=True, with_mask=False)
+    test_dataset = dataset_utils.pre_process_dataset(test_dataset.take(6), with_mask=False)
 
-    batch_size = 64 # 32 # 64
+    # Get datasets ready and optimize input pipeline by
+    # 1. Shuffling
+    # 2. Batching
+    # 3. Prefetching
+    BATCH_SIZE = 64 # 32 # 64
+    train_dataset = train_dataset.shuffle(5000).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
+    val_dataset = val_dataset.batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
+    test_dataset = test_dataset.batch(BATCH_SIZE)
+
     # Show original image resized samples
-    birds_tf_dataset = train_dataset.batch(batch_size)
-    image_batch, mask_batch, label_batch = next(iter(birds_tf_dataset))
-    dataset_utils.show_batch(image_batch.numpy(), mask_batch.numpy(), label_batch.numpy())
-
-    birds_tf_dataset = test_dataset.batch(batch_size)
-    image_batch, mask_batch, label_batch = next(iter(birds_tf_dataset))
-    dataset_utils.show_batch(image_batch.numpy(), mask_batch.numpy(), label_batch.numpy())
-
-
-
-    # # Construct a tf.data.Dataset
-    # dataset, dataset_info = tfds.load(name="caltech_birds2011", download=False,
-    #                                   data_dir="tf_CUB_200_2011", split="false", with_info=True)
-
-
-    # # Build your input pipeline
-    # dataset = dataset.shuffle(1024).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
-    # for features in dataset.take(1):
-    #     image, label, mask = features["image"], features["label"], features['segmentation_mask']
+    image_batch, mask_batch, label_batch = next(iter(train_dataset))
+    dataset_utils.show_batch(image_batch.numpy(), mask_batch.numpy(), label_batch.numpy(), show_mask=True)
     #
-    #     break
+    birds_tf_dataset = test_dataset.batch(BATCH_SIZE)
+    image_batch, mask_batch, label_batch = next(iter(test_dataset))
+    dataset_utils.show_batch(image_batch.numpy(), mask_batch.numpy(), label_batch.numpy(), show_mask=False)
+

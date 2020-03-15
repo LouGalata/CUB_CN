@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
-import utils.augmentation_functions as augmentation_utils
+from .augmentation_functions import augment_dataset
 import cv2
 import glob
 
@@ -61,7 +61,7 @@ def show_batch(image_batch, mask_batch, label_batch, show_mask=False):
 #@tf.function
 def pre_process_dataset(dataset, augmentation=False, with_mask=False, img_height=128, img_width=128):
     if augmentation:
-        dataset = augmentation_utils.augment_dataset(dataset)
+        dataset = augment_dataset(dataset)
 
     if with_mask:
         dataset = dataset.map(get_segmented_image)
