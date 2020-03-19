@@ -113,7 +113,6 @@ def load_dataset(shuffle=True):
     if shuffle:
         train_df = train_df.sample(frac=1)
         val_df = val_df.sample(frac=1)
-        test_df = test_df.sample(frac=1)
 
     # Generate Dataset V2 input pipeline
     train_dataset = tf_dataset_from_dataframe(train_df)
