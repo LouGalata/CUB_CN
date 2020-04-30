@@ -102,7 +102,7 @@ def load_dataset(shuffle=True):
     # Generate validation set with samples of all classes
     val_df = pd.DataFrame([], columns=train_df.columns)
     for class_id in range(1, 201):
-        class_samples = train_df[train_df["class_label"] == class_id].sample(n=3)
+        class_samples = train_df[train_df["class_label"] == class_id][:3]
         val_df = pd.concat((val_df, class_samples), axis=0)
 
     train_df = train_df.drop(val_df.index)
